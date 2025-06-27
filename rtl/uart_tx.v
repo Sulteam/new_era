@@ -1,39 +1,36 @@
 module uart_tx #(
-  // UART frame parameters
+  // Параметры UART
   parameter DATA_BITS = 8,
-  parameter PARITY_TYPE = "none",
   parameter STOP_BITS = 1,
   parameter FIRST_BIT = "lsb",
-  // Timing parametr
+  // Тайминг параметры
   parameter BAUDRATE = 115200,
   parameter CLK_FREQ = 75_000_000  
 ) (
   input wire clk,
-  //Serial line
+  //Послед линия 
   output reg tx,
-  // Transmitted message interface
+  // Передача 
   input wire tx_valid,
   input wire [DATA_BITS - 1 : 0] tx_data
 
 );
 
-  // State machine states 
+  // Состояния конечного автомата 
 parameter IDLE_S       = 2'b01;
 parameter TRANSMIT_S   = 2'b10;
 
-// Constants
+// Внутренние параметры 
 localparam FULLBAUD = CLK_FREQ / BAUDRATE;
-localparam SR_LEN = DATA_BITS + 
-                   ((PARITY_TYPE != "none") ? 1 : 0) + 
-                   STOP_BITS;
+localparam SR_LEN = DATA_BITS + STOP_BITS;
 
-// internal wire
+// Внутренние провода 
 reg [2:0] state;  
 reg [SR_LEN-1:0] tx_shiftreg;
 reg [31:0] clk_counter;
 reg [31:0] baud_counter;
 
-// function reverse bit order 
+// Функция инвертирования даты  
 function [DATA_BITS - 1 : 0] reverse_slv;
   input [DATA_BITS - 1: 0] data;
   integer i;
@@ -44,43 +41,14 @@ function [DATA_BITS - 1 : 0] reverse_slv;
   end
 endfunction
 
-// Function to calculate parity bit
-function parity_bit;
-  input [DATA_BITS-1:0] data;
-  integer i;
-  reg result;
-  begin
-    result = 0;
-    for (i = 0; i < DATA_BITS; i = i + 1)
-      result = result ^ data[i];
-      parity_bit = result;
-  end
-endfunction
 
-// Function to check parity
-function parity_check;
-  input [DATA_BITS-1:0] data;
-  input [255:0] parity_type; 
-  reg parity;
-  begin
-    parity = ^data; 
-        
-    if (parity_type == "none")
-      parity_check = 1'b1;
-      else if (parity_type == "even")
-        parity_check = ~parity;
-      else // "odd"
-        parity_check = parity;
-  end
-endfunction
-
-// Main state machine
+// Основной конечный автомат
 always @(posedge clk) begin
   begin
     case (state)
       // IDLE STATE
         IDLE_S: begin
-          // Switch to transmit state if new data available
+          // Переход в передаче при новых данных 
           if (tx_valid == 1'b1) begin
             state <= TRANSMIT_S;
             tx <= 1'b0;
@@ -97,7 +65,7 @@ always @(posedge clk) begin
         TRANSMIT_S: begin
           clk_counter <= clk_counter + 1;
                 
-          // Push new bit from buffer onto line every full baud cycle
+          // Выталкивать новый бит из буфера в линию каждый полный цикл передачи данных
               if (clk_counter == FULLBAUD-1) begin
                 tx <= tx_shiftreg[SR_LEN-1];
                 tx_shiftreg <= {tx_shiftreg[SR_LEN-2:0], 1'b1};
@@ -105,7 +73,7 @@ always @(posedge clk) begin
                 clk_counter <= 0; 
               end
                 
-            // On last clock cycle of transmission, go idle
+            // На последнем такте передачи перейти в IDLE
               if (baud_counter == SR_LEN && clk_counter == FULLBAUD-1) begin
                 state <= IDLE_S;
                 tx <= 1'b1;

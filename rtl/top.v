@@ -58,7 +58,6 @@ module top #(
   
   uart_tx #(
   .DATA_BITS(16),
-  .PARITY_TYPE("none"),
   .STOP_BITS(1),
   .FIRST_BIT("msb"),
   .BAUDRATE(115200),
