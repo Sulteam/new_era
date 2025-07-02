@@ -1,25 +1,27 @@
 module manch_encoding #(
-  parameter WIDTH = 16
-  
+  parameter BAUDRATE = 115200 * 2,
+  parameter CLK_FREQ = 18_750_000
+
 ) (
-  input wire clk,
-  input wire tx_valid,
-  input wire [WIDTH - 1:0] tx_data,
-  output reg tx
+  input  wire clk,
+  input  wire tx_data,
+  output wire tx_manch
 
 );
   
-  wire [WIDTH * 2 - 1: 0] data_manchester;  // удвоенный данные для передачи по манчестерскому кодированию. (один бит - это переход из "0" в "1" или из "1" в "0")
+  reg [31 :0] clk_counter; 
+  reg CLK_TX;
 
-
-  //преобразование «защелкнутых» входных данных в выходную посылку
-  //преобразуем поле данных в манчестерский вид
-  genvar i;
-  generate for (i = 0; i < 16; i = i + 1)
-  begin : gen_manchester
-     assign data_manchester[2*i] = ~tx_data[i];
-     assign data_manchester[2*i + 1] = tx_data[i];
+  localparam FULLBAUD =  CLK_FREQ / BAUDRATE;
+  
+  always @(posedge clk) begin
+    clk_counter <= clk_counter + 1;
+      if (clk_counter == FULLBAUD-1) begin
+        CLK_TX <= ~ CLK_TX;
+        clk_counter <= 0;
+      end
   end
-  endgenerate
+
+  assign tx_manch = CLK_TX ^ tx_data;
   
 endmodule
