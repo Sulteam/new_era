@@ -8,12 +8,13 @@ module manch_encoding #(
   output wire tx_manch
 
 );
-  
-  reg [31 :0] clk_counter; 
-  reg CLK_TX;
 
   localparam FULLBAUD =  CLK_FREQ / BAUDRATE;
-  
+  localparam bit_width = $clog2(FULLBAUD);
+
+  reg [bit_width - 1 :0] clk_counter; 
+  reg CLK_TX;
+
   always @(posedge clk) begin
     clk_counter <= clk_counter + 1;
       if (clk_counter == FULLBAUD-1) begin

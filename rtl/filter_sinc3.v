@@ -1,11 +1,12 @@
 module filter_sinc3 #(
   parameter WIDTH = 16,
   parameter REG_BIT_WIDTH = 37     // reg_bit_width = x(n) + (M * log2(DR))  DR - decimation rate  
+  
 ) (
-  input                 mclkin,                // тактовая частота для модулятора
-  input                 mdata1,                // входной поток данных от модулятора
-  input                 word_clk,              // тактовая частота после децимации
-  output reg [WIDTH - 1: 0]   DATA             // отфильтрованные данные 
+  input                       mclkin,                // тактовая частота для модулятора
+  input                       mdata1,                // входной поток данных от модулятора
+  input                       word_clk,              // тактовая частота после децимации
+  output reg [WIDTH - 1: 0]   DATA                   // отфильтрованные данные 
 
   
 );
@@ -22,24 +23,7 @@ module filter_sinc3 #(
    reg [REG_BIT_WIDTH - 1:0] diff3;
    reg [REG_BIT_WIDTH - 1:0] diff1_d;
    reg [REG_BIT_WIDTH - 1:0] diff2_d;
-  
-  
-  
-  
-  initial begin
-  ip_data1 = 0;
-	acc1 = 0;
-	acc2 = 0;
-	acc3 = 0;
-	acc3_d2 = 0;
-	diff1 = 0;
-	diff2 = 0;
-	diff3 = 0;
-	diff1_d = 0;
-	diff2_d = 0;  
-	DATA = 0;
-  end
-  
+    
 
   // Входные данные 
   always @(mdata1) begin

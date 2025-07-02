@@ -3,13 +3,15 @@ module uart_tx #(
   parameter DATA_BITS = 8,
   parameter STOP_BITS = 1,
   parameter FIRST_BIT = "lsb",
+  parameter PARITY_TYPE = "none",
   // Тайминг параметры
   parameter BAUDRATE = 115200,
   parameter CLK_FREQ = 75_000_000  
 ) (
   input wire clk,
-  //Послед линия 
+  //Линия передачи 
   output reg tx,
+  output reg busy,   
   // Передача 
   input wire tx_valid,
   input wire [DATA_BITS - 1 : 0] tx_data
@@ -22,7 +24,9 @@ parameter TRANSMIT_S   = 2'b10;
 
 // Внутренние параметры 
 localparam FULLBAUD = CLK_FREQ / BAUDRATE;
-localparam SR_LEN = DATA_BITS + STOP_BITS;
+localparam SR_LEN = DATA_BITS +
+                   ((PARITY_TYPE != "none") ? 1 : 0) + 
+                   STOP_BITS;
 
 // Внутренние провода 
 reg [2:0] state;  
@@ -30,7 +34,7 @@ reg [SR_LEN-1:0] tx_shiftreg;
 reg [31:0] clk_counter;
 reg [31:0] baud_counter;
 
-// Функция инвертирования даты  
+// Функция инвертирования данных   
 function [DATA_BITS - 1 : 0] reverse_slv;
   input [DATA_BITS - 1: 0] data;
   integer i;
@@ -41,6 +45,35 @@ function [DATA_BITS - 1 : 0] reverse_slv;
   end
 endfunction
 
+// Функция вычисления бита паритета
+function parity_bit;
+  input [DATA_BITS-1:0] data;
+  integer i;
+  reg result;
+  begin
+    result = 0;
+    for (i = 0; i < DATA_BITS; i = i + 1)
+      result = result ^ data[i];
+      parity_bit = result;
+  end
+endfunction
+
+// Функция проверки паритета
+function parity_check;
+  input [DATA_BITS-1:0] data;
+  input [255:0] parity_type; 
+  reg parity;
+  begin
+    parity = ^data; 
+        
+    if (parity_type == "none")
+      parity_check = 1'b1;
+      else if (parity_type == "even")
+        parity_check = ~parity;
+      else // "odd"
+        parity_check = parity;
+  end
+endfunction
 
 // Основной конечный автомат
 always @(posedge clk) begin
@@ -48,7 +81,8 @@ always @(posedge clk) begin
     case (state)
       // IDLE STATE
         IDLE_S: begin
-          // Переход в передаче при новых данных 
+          busy <= 1'b0;
+          // Переход к передаче данных при новых данных 
           if (tx_valid == 1'b1) begin
             state <= TRANSMIT_S;
             tx <= 1'b0;
@@ -64,7 +98,7 @@ always @(posedge clk) begin
             // TRANSMIT STATE
         TRANSMIT_S: begin
           clk_counter <= clk_counter + 1;
-                
+          busy <= 1'b1;
           // Выталкивать новый бит из буфера в линию каждый полный цикл передачи данных
               if (clk_counter == FULLBAUD-1) begin
                 tx <= tx_shiftreg[SR_LEN-1];

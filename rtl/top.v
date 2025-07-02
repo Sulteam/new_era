@@ -1,11 +1,11 @@
 module top #(
   parameter WIDTH = 16 
   ) (
-    input    clk,
-    input    data_in_i,
-    input    data_in_u,
-    output   mclkin,
-    output   data_tx
+    input    clk,              // тактовая частота в 75 МГц
+    input    data_in_i,        // сигма-дельта модуляция 
+    input    data_in_u,        // сигма-дельта модуляция 
+    output   mclkin,           // тактовая частота для АЦП
+    output   data_tx           // манчестерский код 
      
 
 );
@@ -57,11 +57,11 @@ module top #(
   );
   
   uart_tx #(
-  .DATA_BITS(16),
+  .DATA_BITS(8),
   .STOP_BITS(1),
   .FIRST_BIT("msb"),
   .BAUDRATE(115200),
-  .CLK_FREQ(75_000_000)
+  .CLK_FREQ(18_750_000)
   
 ) send_data (
   .clk(clk),
