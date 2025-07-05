@@ -25,7 +25,10 @@ module top #(
 
   );
 
-  word_clk gen_word_clk (
+  word_clk #(
+  .dec_rate(256)
+  
+  ) gen_word_clk (
   .mclkin(mclkin),
   .word_clk(word_clk)
   
